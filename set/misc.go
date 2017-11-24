@@ -5,7 +5,7 @@ import (
 	"math/bits"
 )
 
-const phi = 0x9E3779B9
+const phi = 0x9E3779B9 // 2654435769
 
 func phiMix(x uint64) uint64 {
 	h := x * phi
