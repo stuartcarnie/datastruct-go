@@ -228,33 +228,12 @@ func BenchmarkStdMapGet100PercentHitRate(b *testing.B) {
 	}
 }
 
-func BenchmarkStdMapAddRemove(b *testing.B) {
-	m := make(map[uint64]struct{}, 10000)
-	for i := uint64(0); i < 10000; i++ {
-		m[i] = struct{}{}
-	}
-	for i := uint64(0); i < 10000; i+=4 {
-		delete(m, i)
-	}
-
-	b.ResetTimer()
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		for i := uint64(0); i < 10000; i++ {
-			m[i] = struct{}{}
-		}
-		for i := uint64(0); i < 10000; i+=4 {
-			delete(m, i)
-		}
-	}
-}
-
 func BenchmarkUint64AddRemove(b *testing.B) {
 	s := set.NewUint64(10000, 0.99)
 	for i := uint64(0); i < 10000; i++ {
 		s.Add(i)
 	}
-	for i := uint64(0); i < 10000; i+=4 {
+	for i := uint64(0); i < 10000; i += 4 {
 		s.Remove(i)
 	}
 
@@ -264,8 +243,29 @@ func BenchmarkUint64AddRemove(b *testing.B) {
 		for i := uint64(0); i < 10000; i++ {
 			s.Add(i)
 		}
-		for i := uint64(0); i < 10000; i+=4 {
+		for i := uint64(0); i < 10000; i += 4 {
 			s.Remove(i)
+		}
+	}
+}
+
+func BenchmarkStdMapAddRemove(b *testing.B) {
+	m := make(map[uint64]struct{}, 10000)
+	for i := uint64(0); i < 10000; i++ {
+		m[i] = struct{}{}
+	}
+	for i := uint64(0); i < 10000; i += 4 {
+		delete(m, i)
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for i := uint64(0); i < 10000; i++ {
+			m[i] = struct{}{}
+		}
+		for i := uint64(0); i < 10000; i += 4 {
+			delete(m, i)
 		}
 	}
 }

@@ -1,27 +1,33 @@
 package set
 
+import "math"
+
 const freeKey = 0
 
-// Map is a map-like data-structure for int64s
+// Uint64 represents a distinct set of uint64 values.
 type Uint64 struct {
 	mask       uint64
 	fillFactor float64
 	threshold  int
 	size       int
 
-	data    []uint64
-	dataptr uintptr
+	data []uint64
 
 	hasFreeKey bool
 }
 
-// New returns a map initialized with n spaces and uses the stated fillFactor.
-// The map will grow as needed.
+// NewUint64 returns a set initialized to store n elements without allocating.
 func NewUint64(n int, fillFactor float64) *Uint64 {
 	capacity := arraySize(n, fillFactor)
 	s := &Uint64{fillFactor: fillFactor}
 	s.newData(capacity)
 	return s
+}
+
+func (s *Uint64) newData(n int) {
+	s.threshold = int(math.Floor(float64(n) * s.fillFactor))
+	s.mask = uint64(n - 1)
+	s.data = make([]uint64, n)
 }
 
 func (s *Uint64) Len() int { return s.size }
@@ -31,8 +37,8 @@ func (s *Uint64) Contains(key uint64) bool {
 		return s.hasFreeKey
 	}
 
-	ptr := s.ptr(phiMix(key))
-	k := s.get(ptr)
+	ptr := phiMix(key) & s.mask
+	k := s.data[ptr]
 
 	for {
 		if k == key {
@@ -41,8 +47,8 @@ func (s *Uint64) Contains(key uint64) bool {
 		if k == freeKey {
 			return false
 		}
-		ptr = s.inc(ptr, 1)
-		k = s.get(ptr)
+		ptr = (ptr + 1) & s.mask
+		k = s.data[ptr]
 	}
 }
 
@@ -56,12 +62,12 @@ func (s *Uint64) Add(key uint64) {
 		return
 	}
 
-	ptr := s.ptr(phiMix(key))
-	k := s.get(ptr)
+	ptr := phiMix(key) & s.mask
+	k := s.data[ptr]
 
 	for {
 		if k == freeKey {
-			s.set(ptr, key)
+			s.data[ptr] = key
 			if s.size >= s.threshold {
 				s.rehash(len(s.data) * 2)
 			} else {
@@ -71,8 +77,8 @@ func (s *Uint64) Add(key uint64) {
 		} else if k == key {
 			return
 		}
-		ptr = s.inc(ptr, 1)
-		k = s.get(ptr)
+		ptr = (ptr + 1) & s.mask
+		k = s.data[ptr]
 	}
 }
 
@@ -86,8 +92,8 @@ func (s *Uint64) Remove(key uint64) bool {
 		return true
 	}
 
-	ptr := s.ptr(phiMix(key))
-	k := s.get(ptr)
+	ptr := phiMix(key) & s.mask
+	k := s.data[ptr]
 
 	for {
 		if k == key {
@@ -97,8 +103,8 @@ func (s *Uint64) Remove(key uint64) bool {
 		} else if k == freeKey {
 			return false
 		}
-		ptr = s.inc(ptr, 1)
-		k = s.get(ptr)
+		ptr = (ptr + 1) & s.mask
+		k = s.data[ptr]
 	}
 }
 
@@ -106,15 +112,15 @@ func (s *Uint64) shiftKeys(ptr uint64) uint64 {
 	var last, slot uint64
 	var key uint64
 	for {
-		last, ptr = ptr, s.inc(ptr, 1)
+		last, ptr = ptr, (ptr+1)&s.mask
 		for {
-			key = s.get(ptr)
+			key = s.data[ptr]
 			if key == freeKey {
-				s.set(last, freeKey)
+				s.data[last] = freeKey
 				return last
 			}
 
-			slot = s.ptr(phiMix(key)) // current key starting slot
+			slot = phiMix(key) & s.mask // current key starting slot
 			lastIsSameBucket := last >= slot
 			keyIsDifferentBucket := slot > ptr
 
@@ -125,9 +131,9 @@ func (s *Uint64) shiftKeys(ptr uint64) uint64 {
 			} else if lastIsSameBucket && keyIsDifferentBucket {
 				break
 			}
-			ptr = s.inc(ptr, 1)
+			ptr = (ptr + 1) & s.mask
 		}
-		s.set(last, key)
+		s.data[last] = key
 	}
 }
 
